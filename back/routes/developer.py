@@ -96,6 +96,25 @@ def add_resume(
         "message": "Resume uploaded successfully",
         "resume_url": developer.resume
     }
+    
+@router.put("/update/developer", response_model=schemas.DeveloperCreate)
+def update_developer(email: str = Form(...), resume: UploadFile = File(None), db: Session = Depends(get_db)):
+    developer = db.query(models.Developer).filter(models.Developer.email == email).first()
+    if developer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Developer was not found")
+
+    if resume:
+        filename = resume.filename
+        file_path = os.path.join(UPLOAD_DIR, filename)
+
+        with open(file_path, "wb") as f:
+            f.write(resume.file.read())
+
+        developer.resume = f"static/developer/resume/{filename}"
+
+    db.commit()
+    db.refresh(developer)
+    return developer
 
 @router.get("/get/developer/{email}",response_model=schemas.DeveloperCreate )
 def get_developer(email:str,db:Session=Depends(get_db)):
